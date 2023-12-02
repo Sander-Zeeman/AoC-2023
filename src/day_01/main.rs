@@ -1,8 +1,7 @@
 use common::read_input;
 
-fn part1(input: String) -> i32 {
+fn part1(input: &str) -> i32 {
   input
-    .as_str()
     .lines()
     .map(|line| {
       let idx1 = line.find(|c: char| c.is_ascii_digit()).unwrap();
@@ -68,9 +67,8 @@ fn last_digit(line: &str) -> usize {
   }
 }
 
-fn part2(input: String) -> i32 {
+fn part2(input: &str) -> i32 {
   input
-    .as_str()
     .lines()
     .map(|line| {
       let a = first_digit(line);
@@ -80,8 +78,8 @@ fn part2(input: String) -> i32 {
 }
 
 fn main() {
-  println!("Test 1: {}", part1(read_input("./test1.txt")));
-  println!("Test 2: {}", part2(read_input("./test2.txt")));
-  println!("Part 1: {}", part1(read_input("./input1.txt")));
-  println!("Part 2: {}", part2(read_input("./input2.txt")));
+  println!("Test 1: {}", part1(read_input("./test1.txt").as_str()));
+  println!("Test 2: {}", part2(read_input("./test2.txt").as_str()));
+  println!("Part 1: {}", part1(read_input("./input1.txt").as_str()));
+  println!("Part 2: {}", part2(read_input("./input2.txt").as_str()));
 }
