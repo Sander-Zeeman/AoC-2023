@@ -1,113 +1,101 @@
 use common::read_input;
-use std::collections::VecDeque;
 
-#[derive(PartialEq, Copy, Clone)]
 enum Dir {
-  North,
-  East,
-  South,
-  West,
-  Start
+    Up,
+    Right,
+    Down,
+    Left,
 }
 
-#[derive(PartialEq, Copy, Clone)]
-struct Pipe(Dir, Dir, bool);
+use Dir::{Down, Left, Right, Up};
 
-fn connect(pipe: Option<Pipe>, dir: Dir) -> bool {
-  if pipe.is_none() {
-    return false;
-  }
+fn find_start(v: &Vec<Vec<char>>) -> (usize, usize, Dir) {
+    for i in 0..v.len() {
+        for j in 0..v[0].len() {
+            if v[i][j] == 'S' {
+                if i > 0 && "7|F".contains(v[i - 1][j]) {
+                    return (j, i, Up);
+                }
+                if j > 0 && "J-7".contains(v[i][j - 1]) {
+                    return (j, i, Left);
+                }
+                if i < v.len() - 1 && "L|J".contains(v[i + 1][j]) {
+                    return (j, i, Down);
+                }
+                if j < v[0].len() - 1 && "L-F".contains(v[i][j + 1]) {
+                    return (j, i, Right);
+                }
+            }
+        }
+    }
+    panic!();
+}
 
-  let pipe = pipe.unwrap();
-  let goal = match dir {
-    Dir::North => Dir::South,
-    Dir::East => Dir::West,
-    Dir::South => Dir::North,
-    Dir::West => Dir::East,
-    _ => panic!()
-  };
-  pipe.0 == goal || pipe.1 == goal
+fn connect(c: char, dir: Dir) -> Option<Dir> {
+    match dir {
+        Up => match c {
+            '7' => Some(Left),
+            '|' => Some(Up),
+            'F' => Some(Right),
+            'S' => Some(Up),
+            _ => None,
+        },
+        Right => match c {
+            'J' => Some(Up),
+            '-' => Some(Right),
+            '7' => Some(Down),
+            'S' => Some(Up),
+            _ => None,
+        },
+        Down => match c {
+            'L' => Some(Right),
+            '|' => Some(Down),
+            'J' => Some(Left),
+            'S' => Some(Up),
+            _ => None,
+        },
+        Left => match c {
+            'F' => Some(Down),
+            '-' => Some(Left),
+            'L' => Some(Up),
+            'S' => Some(Up),
+            _ => None,
+        },
+    }
 }
 
 fn part1(input: &str) -> i32 {
-  let mut grid: Vec<Vec<Option<Pipe>>> = Vec::new();
-  let mut start_x = 0;
-  let mut start_y = 0;
-  for (i, line) in input.lines().enumerate() {
-    grid.push(Vec::new());
-    for (j, c) in line.chars().enumerate() {
-      let last_entry: &mut Vec<Option<Pipe>> = &mut grid[i];
-      last_entry.push(match c {
-        '|' => Some(Pipe(Dir::North, Dir::South, false)),
-        '-' => Some(Pipe(Dir::West, Dir::East, false)),
-        'L' => Some(Pipe(Dir::North, Dir::East, false)),
-        'J' => Some(Pipe(Dir::North, Dir::West, false)),
-        '7' => Some(Pipe(Dir::West, Dir::South, false)),
-        'F' => Some(Pipe(Dir::East, Dir::South, false)),
-        'S' => {
-          start_x = j;
-          start_y = i;
-          Some(Pipe(Dir::Start, Dir::Start, false))
-        },
-        '.' => None,
-        _ => panic!()
-      });
-    }
-  }
+    let grid: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
+    let (s_x, s_y, s_dir) = find_start(&grid);
+    let mut x = s_x;
+    let mut y = s_y;
+    let mut dir = s_dir;
+    let mut steps = 0;
+    loop {
+        (x, y, dir) = match dir {
+            Up => (x, y - 1, connect(grid[y - 1][x], Up).unwrap()),
+            Right => (x + 1, y, connect(grid[y][x + 1], Right).unwrap()),
+            Down => (x, y + 1, connect(grid[y + 1][x], Down).unwrap()),
+            Left => (x - 1, y, connect(grid[y][x - 1], Left).unwrap()),
+        };
 
-  let mut conns: Vec<Dir> = Vec::new();
-  let y_len = grid.len();
-  let x_len = grid[0].len();
+        steps += 1;
 
-  if start_y > 0 && connect(grid[start_y-1][start_x], Dir::North) {
-      conns.push(Dir::North);
-  }
-  if start_x > 0 && connect(grid[start_y][start_x-1], Dir::West) {
-    conns.push(Dir::West);
-  }
-  if start_y < y_len-1 && connect(grid[start_y+1][start_x], Dir::South) {
-    conns.push(Dir::South);
-  }
-  if start_x < x_len-1 && connect(grid[start_y][start_x+1], Dir::East) {
-    conns.push(Dir::East);
-  }
-
-  grid[start_y][start_x] = Some(Pipe(conns[0].clone(), conns[1].clone(), false));
-
-  let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
-  queue.push_back((start_y, start_x));
-
-  while let Some((y, x)) = queue.pop_front() {
-    let pipe = grid[y][x].unwrap();
-    if pipe.2 {
-      continue;
+        if s_x == x && s_y == y {
+            break;
+        }
     }
 
-    grid[y][x] = Some(Pipe(pipe.0, pipe.1, true));
-    if y > 0 && connect(grid[y-1][x], Dir::North) {
-      queue.push_back((y-1, x));
-    }
-    if x > 0 && connect(grid[y][x-1], Dir::West) {
-      queue.push_back((y, x-1));
-    }
-    if y < y_len-1 && connect(grid[y+1][x], Dir::South) {
-      queue.push_back((y+1, x));
-    }
-    if x < x_len-1 && connect(grid[y][x+1], Dir::East) {
-      queue.push_back((y, x+1));
-    }
-  }
-
-  0
+    steps / 2
 }
 
 fn _part2(_input: &str) -> i32 {
-  return 0;
+    return 0;
 }
 
 fn main() {
-  println!("Test 1: {}", part1(read_input("./test.txt").as_str()));
-  // println!("Test 2: {}", part2(read_input("./test.txt").as_str()));
-  // println!("Part 1: {}", part1(read_input("./input.txt").as_str()));
-  // println!("Part 2: {}", part2(read_input("./input.txt").as_str()));
+    println!("Test 1: {}", part1(read_input("./test.txt").as_str()));
+    // println!("Test 2: {}", part2(read_input("./test.txt").as_str()));
+    println!("Part 1: {}", part1(read_input("./input.txt").as_str()));
+    // println!("Part 2: {}", part2(read_input("./input.txt").as_str()));
 }
